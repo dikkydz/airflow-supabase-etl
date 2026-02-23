@@ -211,8 +211,8 @@ Kenapa Airflow?
 
 ⭐ Bonus Implemented
 
-✔ Transformasi data sederhana
-✔ Arsitektur raw → staging → mart
-✔ Orkestrasi dengan Airflow
-✔ Cloud storage integration
-✔ Dockerized environment
+✔ Transformasi data sederhana <br/>
+✔ Arsitektur raw → staging → mart <br/>
+✔ Orkestrasi dengan Airflow <br/>
+✔ Cloud storage integration <br/> 
+✔ Dockerized environment <br/>
