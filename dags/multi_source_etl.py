@@ -3,6 +3,7 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 import json
 import pandas as pd
+import os
 from datetime import datetime as dt
 
 from modules.etl_api import etl_api_to_raw
@@ -11,51 +12,45 @@ from modules.load_to_supabase import upload_to_supabase
 
 
 # ==============================
-# TRANSFORM FUNCTIONS
+# TRANSFORM RAW → STAGING
 # ==============================
 
 def transform_raw_to_staging(input_file, output_file):
-    """
-    Transform RAW JSON -> STAGING Parquet
-    Basic cleaning + normalization
-    """
-    with open(f"/opt/airflow/data/{input_file}", "r") as f:
+    os.makedirs("/opt/airflow/data/staging", exist_ok=True)
+
+    with open(f"/opt/airflow/data/raw/{input_file}", "r") as f:
         data = json.load(f)
 
     df = pd.DataFrame(data)
 
-    # Lowercase columns
     df.columns = df.columns.str.lower()
-
-    # Remove duplicates
     df = df.drop_duplicates()
 
-    # Normalize date column if exists
     if "date" in df.columns:
         df["date"] = pd.to_datetime(df["date"], errors="coerce")
 
-    # Add ingestion timestamp
     df["ingested_at"] = dt.utcnow()
 
-    df.to_parquet(f"/opt/airflow/data/{output_file}", index=False)
+    df.to_parquet(f"/opt/airflow/data/staging/{output_file}", index=False)
 
-    print(f"Staging file created: {output_file}")
+    print(f"STAGING file created: {output_file}")
 
+
+# ==============================
+# BUILD MART
+# ==============================
 
 def build_data_mart(api_file, netflix_file, output_file):
-    """
-    Build simple MART layer (aggregation ready for analytics)
-    """
+    os.makedirs("/opt/airflow/data/mart", exist_ok=True)
 
-    df_api = pd.read_parquet(f"/opt/airflow/data/{api_file}")
-    df_netflix = pd.read_parquet(f"/opt/airflow/data/{netflix_file}")
+    df_api = pd.read_parquet(f"/opt/airflow/data/staging/{api_file}")
+    df_netflix = pd.read_parquet(f"/opt/airflow/data/staging/{netflix_file}")
 
     df_api["source"] = "api"
     df_netflix["source"] = "netflix"
 
     df_all = pd.concat([df_api, df_netflix], ignore_index=True)
 
-    # Example aggregation
     mart = (
         df_all
         .groupby("source")
@@ -65,7 +60,7 @@ def build_data_mart(api_file, netflix_file, output_file):
 
     mart["generated_at"] = dt.utcnow()
 
-    mart.to_parquet(f"/opt/airflow/data/{output_file}", index=False)
+    mart.to_parquet(f"/opt/airflow/data/mart/{output_file}", index=False)
 
     print("Data mart built successfully")
 
@@ -86,7 +81,7 @@ with DAG(
 ) as dag:
 
     # ======================
-    # EXTRACT (RAW)
+    # EXTRACT → RAW
     # ======================
 
     api_task = PythonOperator(
@@ -105,12 +100,12 @@ with DAG(
 
     upload_api_raw = PythonOperator(
         task_id="upload_api_raw",
-        python_callable=lambda: upload_to_supabase("api_staging.json")
+        python_callable=lambda: upload_to_supabase("api_raw.json", "raw")
     )
 
     upload_netflix_raw = PythonOperator(
         task_id="upload_netflix_raw",
-        python_callable=lambda: upload_to_supabase("netflix_staging.json")
+        python_callable=lambda: upload_to_supabase("netflix_raw.json", "raw")
     )
 
     # ======================
@@ -120,7 +115,7 @@ with DAG(
     transform_api = PythonOperator(
         task_id="transform_api_staging",
         python_callable=lambda: transform_raw_to_staging(
-            "api_staging.json",
+            "api_raw.json",
             "api_staging.parquet"
         )
     )
@@ -128,7 +123,7 @@ with DAG(
     transform_netflix = PythonOperator(
         task_id="transform_netflix_staging",
         python_callable=lambda: transform_raw_to_staging(
-            "netflix_staging.json",
+            "netflix_raw.json",
             "netflix_staging.parquet"
         )
     )
@@ -139,12 +134,12 @@ with DAG(
 
     upload_api_staging = PythonOperator(
         task_id="upload_api_staging",
-        python_callable=lambda: upload_to_supabase("api_staging.parquet")
+        python_callable=lambda: upload_to_supabase("api_staging.parquet", "staging")
     )
 
     upload_netflix_staging = PythonOperator(
         task_id="upload_netflix_staging",
-        python_callable=lambda: upload_to_supabase("netflix_staging.parquet")
+        python_callable=lambda: upload_to_supabase("netflix_staging.parquet", "staging")
     )
 
     # ======================
@@ -166,7 +161,7 @@ with DAG(
 
     upload_mart = PythonOperator(
         task_id="upload_mart",
-        python_callable=lambda: upload_to_supabase("mart_summary.parquet")
+        python_callable=lambda: upload_to_supabase("mart_summary.parquet", "mart")
     )
 
     # ======================

@@ -176,7 +176,7 @@ upload_to_supabase
 
 Bucket: 
 ``` 
-raw-data 
+ListData 
 ```
 
 Files generated:
