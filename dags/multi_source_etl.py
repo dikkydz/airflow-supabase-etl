@@ -1,69 +1,15 @@
+# dags/multi_source_etl.py
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
-import json
-import pandas as pd
 import os
-from datetime import datetime as dt
 
-from modules.etl_api import etl_api_to_raw
-from modules.etl_netflix import etl_netflix_to_raw
-from modules.load_to_supabase import upload_to_supabase
-
-
-# ==============================
-# TRANSFORM RAW → STAGING
-# ==============================
-
-def transform_raw_to_staging(input_file, output_file):
-    os.makedirs("/opt/airflow/data/staging", exist_ok=True)
-
-    with open(f"/opt/airflow/data/raw/{input_file}", "r") as f:
-        data = json.load(f)
-
-    df = pd.DataFrame(data)
-
-    df.columns = df.columns.str.lower()
-    df = df.drop_duplicates()
-
-    if "date" in df.columns:
-        df["date"] = pd.to_datetime(df["date"], errors="coerce")
-
-    df["ingested_at"] = dt.utcnow()
-
-    df.to_parquet(f"/opt/airflow/data/staging/{output_file}", index=False)
-
-    print(f"STAGING file created: {output_file}")
-
-
-# ==============================
-# BUILD MART
-# ==============================
-
-def build_data_mart(api_file, netflix_file, output_file):
-    os.makedirs("/opt/airflow/data/mart", exist_ok=True)
-
-    df_api = pd.read_parquet(f"/opt/airflow/data/staging/{api_file}")
-    df_netflix = pd.read_parquet(f"/opt/airflow/data/staging/{netflix_file}")
-
-    df_api["source"] = "api"
-    df_netflix["source"] = "netflix"
-
-    df_all = pd.concat([df_api, df_netflix], ignore_index=True)
-
-    mart = (
-        df_all
-        .groupby("source")
-        .size()
-        .reset_index(name="total_records")
-    )
-
-    mart["generated_at"] = dt.utcnow()
-
-    mart.to_parquet(f"/opt/airflow/data/mart/{output_file}", index=False)
-
-    print("Data mart built successfully")
-
+# import modul dari scripts
+from scripts.etl_api import etl_api_to_raw
+from scripts.etl_netflix import etl_netflix_to_raw
+from scripts.load_to_supabase import upload_to_supabase
+from scripts.transform import transform_raw_to_staging, build_data_mart  # buat file transform.py baru
 
 # ==============================
 # DAG
@@ -83,6 +29,11 @@ with DAG(
     # ======================
     # EXTRACT → RAW
     # ======================
+
+    # pastikan folder raw/staging/mart ada
+    os.makedirs("/opt/airflow/data/raw", exist_ok=True)
+    os.makedirs("/opt/airflow/data/staging", exist_ok=True)
+    os.makedirs("/opt/airflow/data/mart", exist_ok=True)
 
     api_task = PythonOperator(
         task_id="extract_api",

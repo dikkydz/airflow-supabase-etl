@@ -149,8 +149,15 @@ http://localhost:8080
 ```
 Default login:
 ```
-username: airflow
-password: airflow
+docker exec -it airflow-webserver bash
+
+airflow users create \
+  --username admin \
+  --firstname admin \
+  --lastname admin \
+  --role Admin \
+  --email admin@email.com \
+  --password admin
 ```
 
 6️⃣ Trigger DAG
