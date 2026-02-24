@@ -130,8 +130,19 @@ cd airflow-supabase-etl
 
 Buat file .env:
 ```
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your_anon_or_service_role_key
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_KEY=your_supabase_key 
+
+
+# Masukkan Fernet Key hasil generate di sini
+# docker run --rm apache/airflow:2.9.0 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+AIRFLOW__CORE__FERNET_KEY=
+
+
+# Masukkan Secret Key hasil generate di sini
+# docker run --rm apache/airflow:2.9.0 python -c "import secrets; print(secrets.token_hex(32))"
+AIRFLOW__WEBSERVER__SECRET_KEY=
+
 ```
 3️⃣ Build & Run Docker
 ```

@@ -30,8 +30,6 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__CORE__FERNET_KEY=xekNxdxANfuVEXuDoMpi7VA_TM_4OpfGE_2zl92WkL0=
-      - AIRFLOW__WEBSERVER__SECRET_KEY=dd957439b323a76de0be22b178a0c4b68f50149b2c7cbbf52b28ae1c4c9a169b
       - PYTHONPATH=/opt/airflow
       
     command: >
@@ -58,8 +56,6 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__CORE__FERNET_KEY=xekNxdxANfuVEXuDoMpi7VA_TM_4OpfGE_2zl92WkL0=
-      - AIRFLOW__WEBSERVER__SECRET_KEY=dd957439b323a76de0be22b178a0c4b68f50149b2c7cbbf52b28ae1c4c9a169b
       - PYTHONPATH=/opt/airflow
     command: >
       bash -c "
